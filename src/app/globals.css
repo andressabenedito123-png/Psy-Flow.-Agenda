@@ -1,26 +1,132 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #08090b;
+    --foreground: #f3f4f6;
+    --card: #0e1015;
+    --card-foreground: #f3f4f6;
+    --card-hover: #13161d;
+    --border: rgba(255, 255, 255, 0.07);
+    --border-hover: rgba(210, 248, 2, 0.25);
+    
+    /* Finpath Signature Neon Lime */
+    --brand-lime: #D2F802;
+    --brand-lime-hover: #bde002;
+    --brand-lime-glow: rgba(210, 248, 2, 0.15);
+    
+    --muted: #14171f;
+    --muted-foreground: #8e95a5;
+    --accent: #191d26;
+    --accent-foreground: #ffffff;
+    
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-urbanist), system-ui, -apple-system, sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* Finpath Glassmorphism & Card Glows */
+.finpath-card {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.03) 0%, rgba(14, 16, 21, 0.85) 100%);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  backdrop-filter: blur(12px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.finpath-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 0 25px -5px rgba(210, 248, 2, 0.05);
+}
+
+.finpath-card-highlight {
+  background: linear-gradient(135deg, rgba(210, 248, 2, 0.08) 0%, rgba(14, 16, 21, 0.95) 70%);
+  border: 1px solid rgba(210, 248, 2, 0.35);
+  box-shadow: 0 10px 30px -10px rgba(210, 248, 2, 0.12);
+}
+
+.finpath-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.finpath-badge-lime {
+  background: rgba(210, 248, 2, 0.12);
+  color: #D2F802;
+  border: 1px solid rgba(210, 248, 2, 0.25);
+}
+
+/* Finpath Buttons */
+.btn-lime {
+  background-color: #D2F802;
+  color: #08090b;
+  font-weight: 700;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px 0 rgba(210, 248, 2, 0.25);
+}
+
+.btn-lime:hover {
+  background-color: #bde002;
+  box-shadow: 0 6px 20px 0 rgba(210, 248, 2, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: #14171f;
+  color: #f3f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #1a1e28;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #08090b;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e222b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a303d;
 }
