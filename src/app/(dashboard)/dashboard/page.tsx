@@ -5,10 +5,8 @@ import {
   CheckCircle2, 
   Users, 
   Clock, 
-  MessageSquare, 
   Plus, 
   ShieldCheck, 
-  Sparkles,
   ArrowUpRight,
   ChevronRight,
   Bot

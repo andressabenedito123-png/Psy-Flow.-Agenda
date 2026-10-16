@@ -1,10 +1,7 @@
-import Link from "next/link";
 import { 
   CreditCard, 
   Check, 
   Sparkles, 
-  ShieldCheck, 
-  Zap, 
   ArrowRight,
   Clock
 } from "lucide-react";

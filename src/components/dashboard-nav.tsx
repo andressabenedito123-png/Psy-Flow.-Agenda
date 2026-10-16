@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   LayoutDashboard, 
   Users, 
@@ -30,6 +30,7 @@ interface NavProps {
 
 export function DashboardNav({ user, subscription }: NavProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -42,7 +43,8 @@ export function DashboardNav({ user, subscription }: NavProps) {
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.push("/login");
+    router.refresh();
   };
 
   return (

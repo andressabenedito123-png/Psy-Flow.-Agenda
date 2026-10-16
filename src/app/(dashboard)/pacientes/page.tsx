@@ -1,14 +1,10 @@
-import Link from "next/link";
+import { NewPatientModal } from "@/components/new-patient-modal";
 import { 
-  Users, 
   Search, 
-  Plus, 
   ShieldCheck, 
   Phone, 
   Calendar, 
-  MoreVertical,
-  CheckCircle2,
-  Clock
+  MoreVertical
 } from "lucide-react";
 
 export default function PacientesPage() {
@@ -88,10 +84,7 @@ export default function PacientesPage() {
           </p>
         </div>
 
-        <button className="btn-lime text-xs py-2.5 px-4 cursor-pointer">
-          <Plus className="w-3.5 h-3.5" />
-          Cadastrar Novo Paciente
-        </button>
+        <NewPatientModal />
       </div>
 
       {/* Filter and Search Bar */}

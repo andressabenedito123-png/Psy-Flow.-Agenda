@@ -9,7 +9,6 @@ import {
   Clock, 
   ArrowRight, 
   Users, 
-  CreditCard,
   Lock,
   Sparkles
 } from "lucide-react";

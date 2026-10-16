@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, ArrowLeft, Shield, FileText } from "lucide-react";
+import { Bot, ArrowLeft, FileText } from "lucide-react";
 
 export default function TermosDeUsoPage() {
   return (

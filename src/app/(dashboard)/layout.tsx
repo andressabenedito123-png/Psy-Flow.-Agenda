@@ -6,8 +6,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let user: any = null;
-  let subscription: any = null;
+  let user: { email?: string; full_name?: string; avatar_url?: string } | null = null;
+  let subscription: { status?: string; tier?: string; trial_ends_at?: string | null } | null = null;
 
   try {
     const supabase = await createClient();
@@ -42,7 +42,7 @@ export default async function DashboardLayout({
     subscription = {
       status: "trialing",
       tier: "trial",
-      trial_ends_at: new Date(Date.now() + 7 * 86400000).toISOString(),
+      trial_ends_at: "2026-10-13T23:59:59.000Z",
     };
   }
 

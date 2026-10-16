@@ -1,13 +1,8 @@
-import Link from "next/link";
+import { NewAppointmentModal } from "@/components/new-appointment-modal";
 import { 
-  CalendarDays, 
   ChevronLeft, 
   ChevronRight, 
-  Plus, 
   Clock, 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle,
   Phone
 } from "lucide-react";
 
@@ -99,10 +94,7 @@ export default function AgendaPage() {
             </button>
           </div>
 
-          <button className="btn-lime text-xs py-2.5 px-4 cursor-pointer">
-            <Plus className="w-3.5 h-3.5" />
-            Agendar Nova Sessão
-          </button>
+          <NewAppointmentModal />
         </div>
       </div>
 

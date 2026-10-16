@@ -1,36 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
-  Bot, 
   Key, 
   Clock, 
-  MessageSquare, 
   Save, 
   Trash2, 
-  ShieldAlert, 
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import { saveBotSettingsAction, deleteAccountAction } from "@/actions/settings";
+
+interface BotSettingsData {
+  whatsapp_instance_name?: string | null;
+  whatsapp_api_url?: string | null;
+  session_duration_minutes?: number;
+  session_price?: number;
+  welcome_message?: string;
+  is_active?: boolean;
+}
 
 export default function ConfiguracoesPage() {
   const [activeTab, setActiveTab] = useState<"whatsapp" | "regras" | "lgpd">("whatsapp");
-  const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  // Form states initialized with reasonable defaults
+  const [settings, setSettings] = useState<BotSettingsData>({
+    whatsapp_instance_name: "psiflow-consultorio",
+    whatsapp_api_url: "https://api.whatsapp-psiflow.com.br",
+    session_duration_minutes: 50,
+    session_price: 150.0,
+    welcome_message: "Olá! Sou a secretária virtual do consultório da Dra. Andressa. Como posso te ajudar com seus agendamentos hoje?",
+    is_active: true,
+  });
+
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from("bot_settings")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+          if (data && !error) {
+            setSettings((prev) => ({
+              ...prev,
+              whatsapp_instance_name: data.whatsapp_instance_name || prev.whatsapp_instance_name,
+              whatsapp_api_url: data.whatsapp_api_url || prev.whatsapp_api_url,
+              session_duration_minutes: data.session_duration_minutes || prev.session_duration_minutes,
+              session_price: data.session_price || prev.session_price,
+              welcome_message: data.welcome_message || prev.welcome_message,
+              is_active: data.is_active ?? prev.is_active,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao carregar configurações:", err);
+      }
+    }
+
+    loadSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setIsSaving(true);
+    setMessage(null);
+
+    const formData = new FormData(e.currentTarget);
+    try {
+      const res = await saveBotSettingsAction({ ok: false, message: "" }, formData);
+      if (res.ok) {
+        setMessage({ type: "success", text: res.message || "Configurações salvas com sucesso!" });
+      } else {
+        setMessage({ type: "error", text: res.message || "Erro ao salvar configurações." });
+      }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Ocorreu um erro ao salvar.";
+      setMessage({ type: "error", text: errorMsg });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setMessage(null), 5000);
+    }
   };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmation !== "EXCLUIR") return;
     setIsDeleting(true);
-    // Dispara a rotina de exclusão LGPD
-    alert("Solicitação de exclusão definitiva enviada conforme LGPD Art. 18.");
-    setIsDeleting(false);
+    setMessage(null);
+
+    const formData = new FormData();
+    formData.append("confirmation", "EXCLUIR");
+
+    try {
+      const res = await deleteAccountAction({ ok: false, message: "" }, formData);
+      if (!res.ok) {
+        setMessage({ type: "error", text: res.message });
+      }
+    } catch (err: unknown) {
+      // Se redirecionou, o Next.js lança uma exceção de redirect que é normal
+      if (typeof err === "object" && err !== null && "digest" in err) {
+        const digest = String((err as { digest?: string }).digest);
+        if (digest.startsWith("NEXT_REDIRECT")) return;
+      }
+      const errorMsg = err instanceof Error ? err.message : "Erro ao solicitar exclusão de conta.";
+      setMessage({ type: "error", text: errorMsg });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -46,9 +131,20 @@ export default function ConfiguracoesPage() {
           </p>
         </div>
 
-        {saved && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-xs font-semibold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Configurações salvas!
+        {message && (
+          <div
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold animate-fade-in ${
+              message.type === "success"
+                ? "bg-emerald-500/10 border border-emerald-500/25 text-emerald-400"
+                : "bg-red-500/10 border border-red-500/25 text-red-400"
+            }`}
+          >
+            {message.type === "success" ? (
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            ) : (
+              <AlertTriangle className="w-3.5 h-3.5" />
+            )}
+            {message.text}
           </div>
         )}
       </div>
@@ -57,7 +153,7 @@ export default function ConfiguracoesPage() {
       <div className="flex items-center gap-2 border-b border-white/5 pb-2 text-xs font-semibold">
         <button
           onClick={() => setActiveTab("whatsapp")}
-          className={`px-4 py-2 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
             activeTab === "whatsapp"
               ? "bg-[#D2F802]/15 text-[#D2F802] border border-[#D2F802]/30"
               : "text-gray-400 hover:text-white"
@@ -67,7 +163,7 @@ export default function ConfiguracoesPage() {
         </button>
         <button
           onClick={() => setActiveTab("regras")}
-          className={`px-4 py-2 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
             activeTab === "regras"
               ? "bg-[#D2F802]/15 text-[#D2F802] border border-[#D2F802]/30"
               : "text-gray-400 hover:text-white"
@@ -77,7 +173,7 @@ export default function ConfiguracoesPage() {
         </button>
         <button
           onClick={() => setActiveTab("lgpd")}
-          className={`px-4 py-2 rounded-xl transition-all ${
+          className={`px-4 py-2 rounded-xl transition-all cursor-pointer ${
             activeTab === "lgpd"
               ? "bg-red-500/15 text-red-400 border border-red-500/30"
               : "text-gray-400 hover:text-red-400"
@@ -102,7 +198,8 @@ export default function ConfiguracoesPage() {
               </label>
               <input
                 type="text"
-                defaultValue="psiflow-consultorio"
+                name="whatsapp_instance_name"
+                defaultValue={settings.whatsapp_instance_name || "psiflow-consultorio"}
                 className="w-full bg-[#12151d] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 font-mono text-xs"
               />
               <span className="text-[11px] text-gray-500 mt-1 block">
@@ -115,8 +212,9 @@ export default function ConfiguracoesPage() {
                 URL da API (Evolution API Server)
               </label>
               <input
-                type="text"
-                defaultValue="https://api.whatsapp-psiflow.com.br"
+                type="url"
+                name="whatsapp_api_url"
+                defaultValue={settings.whatsapp_api_url || "https://api.whatsapp-psiflow.com.br"}
                 className="w-full bg-[#12151d] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 font-mono text-xs"
               />
             </div>
@@ -127,19 +225,38 @@ export default function ConfiguracoesPage() {
               </label>
               <input
                 type="password"
-                defaultValue="••••••••••••••••••••••••••••••••"
+                name="whatsapp_api_token"
+                placeholder="Deixe em branco para manter o token atual"
                 className="w-full bg-[#12151d] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 font-mono text-xs"
               />
               <span className="text-[11px] text-gray-500 mt-1 block">
                 O token é criptografado em repouso no Supabase antes de ser gravado.
               </span>
             </div>
+
+            <div className="pt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  defaultChecked={settings.is_active ?? true}
+                  className="rounded border-white/20 bg-[#12151d] text-[#D2F802] focus:ring-[#D2F802]"
+                />
+                <span className="text-gray-300 font-semibold text-xs">
+                  Ativar secretária virtual e agendamento automático
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="pt-4 border-t border-white/5 flex justify-end">
-            <button type="submit" className="btn-lime text-xs py-2.5 px-5">
-              <Save className="w-3.5 h-3.5" />
-              Salvar Credenciais
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-lime text-xs py-2.5 px-5 cursor-pointer disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {isSaving ? "Salvando..." : "Salvar Credenciais"}
             </button>
           </div>
         </form>
@@ -160,7 +277,8 @@ export default function ConfiguracoesPage() {
               </label>
               <input
                 type="number"
-                defaultValue={50}
+                name="session_duration_minutes"
+                defaultValue={settings.session_duration_minutes ?? 50}
                 className="w-full bg-[#12151d] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 font-mono text-xs"
               />
             </div>
@@ -171,7 +289,9 @@ export default function ConfiguracoesPage() {
               </label>
               <input
                 type="number"
-                defaultValue={150.00}
+                name="session_price"
+                step="0.01"
+                defaultValue={settings.session_price ?? 150.0}
                 className="w-full bg-[#12151d] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 font-mono text-xs"
               />
             </div>
@@ -183,15 +303,20 @@ export default function ConfiguracoesPage() {
             </label>
             <textarea
               rows={3}
-              defaultValue="Olá! Sou a secretária virtual do consultório da Dra. Andressa. Como posso te ajudar com seus agendamentos hoje?"
+              name="welcome_message"
+              defaultValue={settings.welcome_message || "Olá! Sou a secretária virtual do consultório da Dra. Andressa. Como posso te ajudar com seus agendamentos hoje?"}
               className="w-full bg-[#12151d] border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 text-xs leading-relaxed"
             />
           </div>
 
           <div className="pt-4 border-t border-white/5 flex justify-end">
-            <button type="submit" className="btn-lime text-xs py-2.5 px-5">
-              <Save className="w-3.5 h-3.5" />
-              Salvar Regras
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-lime text-xs py-2.5 px-5 cursor-pointer disabled:opacity-50"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {isSaving ? "Salvando..." : "Salvar Regras"}
             </button>
           </div>
         </form>
@@ -220,7 +345,7 @@ export default function ConfiguracoesPage() {
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 space-y-3">
             <div className="flex items-center gap-2 text-red-400 text-xs font-bold">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              Para confirmar a exclusão, digite a palavra "EXCLUIR" abaixo:
+              Para confirmar a exclusão, digite a palavra &quot;EXCLUIR&quot; abaixo:
             </div>
 
             <input
@@ -234,13 +359,13 @@ export default function ConfiguracoesPage() {
             <button
               onClick={handleDeleteAccount}
               disabled={deleteConfirmation !== "EXCLUIR" || isDeleting}
-              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+              className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 deleteConfirmation === "EXCLUIR"
-                  ? "bg-red-600 text-white hover:bg-red-700 cursor-pointer shadow-lg shadow-red-900/40"
+                  ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/40"
                   : "bg-red-950/30 text-gray-600 cursor-not-allowed border border-red-900/20"
               }`}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
               {isDeleting ? "Excluindo todos os dados..." : "Excluir Definitivamente Minha Conta e Pacientes"}
             </button>
           </div>

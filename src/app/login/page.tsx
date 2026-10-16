@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Bot, ShieldCheck, ArrowRight, Lock, Check } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { Bot, ShieldCheck, Lock, Check } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -20,13 +20,10 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const supabase = createClient();
-      const origin = window.location.origin;
-
       const { error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback?consent=1`,
+          redirectTo: `${window.location.origin}/auth/callback?consent=1&next=/dashboard`,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
@@ -35,11 +32,14 @@ export default function LoginPage() {
       });
 
       if (signInError) {
-        setError(signInError.message || "Erro ao conectar com Google.");
+        console.error("Erro ao fazer login:", signInError);
+        setError(signInError.message || "Erro ao conectar com o Google.");
         setLoading(false);
       }
-    } catch (err: any) {
-      setError(err?.message || "Ocorreu um erro inesperado.");
+    } catch (err: unknown) {
+      console.error("Erro inesperado ao fazer login:", err);
+      const message = err instanceof Error ? err.message : "Ocorreu um erro inesperado.";
+      setError(message);
       setLoading(false);
     }
   };
@@ -126,11 +126,10 @@ export default function LoginPage() {
           <button
             onClick={handleGoogleLogin}
             disabled={loading || !acceptedTerms}
-            className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all ${
-              acceptedTerms
+            className={`w-full py-3.5 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-3 transition-all ${acceptedTerms
                 ? "bg-white text-gray-900 hover:bg-gray-100 shadow-lg cursor-pointer"
                 : "bg-white/10 text-gray-500 cursor-not-allowed border border-white/5"
-            }`}
+              }`}
           >
             {loading ? (
               <span className="inline-block w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin" />
@@ -138,15 +137,15 @@ export default function LoginPage() {
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.88c2.27-2.09 3.665-5.17 3.665-9.09z"
                 />
                 <path
                   fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3c-1.08.72-2.45 1.16-4.05 1.16-3.1 0-5.74-2.1-6.68-4.93H1.28v3.09C3.26 21.3 7.32 24 12 24z"
                 />
                 <path
                   fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  d="M5.32 14.32c-.24-.72-.38-1.49-.38-2.32s.14-1.6.38-2.32V6.59H1.28C.46 8.21 0 10.05 0 12s.46 3.79 1.28 5.41l4.04-3.09z"
                 />
                 <path
                   fill="#EA4335"
