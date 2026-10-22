@@ -1,8 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, X, Calendar, Clock, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Calendar, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { createAppointmentAction } from "@/actions/appointments";
+import { createClient } from "@supabase/supabase-js";
+
+// Conexão direta com o Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface PatientOption {
   id: string;
@@ -13,11 +20,31 @@ interface NewAppointmentModalProps {
   patients?: PatientOption[];
 }
 
-export function NewAppointmentModal({ patients = [] }: NewAppointmentModalProps) {
+export function NewAppointmentModal({ patients: _propPatients = [] }: NewAppointmentModalProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const [dbPatients, setDbPatients] = useState<PatientOption[]>([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+
+  // Busca os pacientes reais sempre que a janela for aberta
+  useEffect(() => {
+    if (isOpen) {
+      setLoadingPatients(true);
+      const fetchPatients = async () => {
+        const { data } = await supabase
+          .from('patients')
+          .select('id, full_name')
+          .order('full_name', { ascending: true });
+
+        if (data) setDbPatients(data);
+        setLoadingPatients(false);
+      };
+      fetchPatients();
+    }
+  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -83,27 +110,28 @@ export function NewAppointmentModal({ patients = [] }: NewAppointmentModalProps)
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-gray-400 font-semibold mb-1">Paciente *</label>
-                  {patients.length > 0 ? (
+                  {loadingPatients ? (
+                    <div className="flex items-center gap-2 text-gray-500 bg-[#12151d] border border-white/10 rounded-xl px-3.5 py-2.5">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      A carregar pacientes...
+                    </div>
+                  ) : dbPatients.length > 0 ? (
                     <select
                       name="patient_id"
                       required
                       className="w-full bg-[#12151d] border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 text-xs"
                     >
                       <option value="">Selecione um paciente...</option>
-                      {patients.map((p) => (
+                      {dbPatients.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.full_name}
                         </option>
                       ))}
                     </select>
                   ) : (
-                    <input
-                      name="patient_id"
-                      required
-                      placeholder="ID do paciente cadastrado"
-                      defaultValue="00000000-0000-0000-0000-000000000001"
-                      className="w-full bg-[#12151d] border border-white/10 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 text-xs font-mono"
-                    />
+                    <div className="text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5">
+                      Tem de cadastrar um paciente primeiro.
+                    </div>
                   )}
                 </div>
 
@@ -115,7 +143,7 @@ export function NewAppointmentModal({ patients = [] }: NewAppointmentModalProps)
                       type="datetime-local"
                       name="starts_at"
                       required
-                      defaultValue="2026-10-08T14:00"
+                      defaultValue="2026-10-23T14:00"
                       className="w-full bg-[#12151d] border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-white focus:outline-none focus:border-[#D2F802]/50 text-xs"
                     />
                   </div>
@@ -156,8 +184,8 @@ export function NewAppointmentModal({ patients = [] }: NewAppointmentModalProps)
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="btn-lime text-xs py-2 px-5"
+                    disabled={loading || dbPatients.length === 0}
+                    className="btn-lime text-xs py-2 px-5 disabled:opacity-50"
                   >
                     {loading ? "Agendando..." : "Confirmar Agendamento"}
                   </button>
