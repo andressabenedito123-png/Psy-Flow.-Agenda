@@ -1,18 +1,75 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { 
-  TrendingUp, 
-  Calendar, 
-  CheckCircle2, 
-  Users, 
-  Clock, 
-  Plus, 
-  ShieldCheck, 
+import { createClient } from "@supabase/supabase-js";
+import {
+  TrendingUp,
+  Calendar,
+  CheckCircle2,
+  Users,
+  Clock,
+  Plus,
+  ShieldCheck,
   ArrowUpRight,
   ChevronRight,
-  Bot
+  Bot,
+  Loader2
 } from "lucide-react";
 
+// Conexão com o Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 export default function DashboardPage() {
+  const [agendamentosHoje, setAgendamentosHoje] = useState<any[]>([]);
+  const [totalPacientes, setTotalPacientes] = useState<number>(0);
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    async function carregarDadosDashboard() {
+      // 1. Carregar contagem de pacientes
+      const { count } = await supabase
+        .from('patients')
+        .select('*', { count: 'exact', head: true });
+
+      if (count !== null) setTotalPacientes(count);
+
+      // 2. Carregar agendamentos (Join com tabela de pacientes)
+      const { data } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          starts_at,
+          duration_minutes,
+          price,
+          status,
+          patients (
+            full_name,
+            phone
+          )
+        `)
+        .order('starts_at', { ascending: true })
+        .limit(10); // Limita para não sobrecarregar o dashboard
+
+      if (data) setAgendamentosHoje(data);
+
+      setCarregando(false);
+    }
+
+    carregarDadosDashboard();
+  }, []);
+
+  const formatarHorario = (dataIso: string, duracao: number) => {
+    const inicio = new Date(dataIso);
+    const fim = new Date(inicio.getTime() + duracao * 60000);
+    const timeIn = inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    const timeOut = fim.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${timeIn} - ${timeOut}`;
+  };
+
   return (
     <div className="p-8 max-w-7xl mx-auto w-full space-y-8">
       {/* Top Header */}
@@ -52,7 +109,7 @@ export default function DashboardPage() {
 
       {/* KPI Cards (Finpath Metric Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Faturamento Previsto */}
+        {/* Card 1: Faturamento Previsto (Ainda mockado para a UI) */}
         <div className="finpath-card p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider">Faturamento Previsto</span>
@@ -74,7 +131,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 2: Consultas do Mês */}
+        {/* Card 2: Consultas do Mês (Ainda mockado para a UI) */}
         <div className="finpath-card p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider">Consultas (Mês)</span>
@@ -94,7 +151,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 3: Taxa de Comparecimento */}
+        {/* Card 3: Taxa de Comparecimento (Ainda mockado para a UI) */}
         <div className="finpath-card p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-gray-400 mb-3">
             <span className="text-xs font-semibold uppercase tracking-wider">Comparecimento</span>
@@ -114,38 +171,40 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Card 4: Pacientes Ativos */}
+        {/* Card 4: Pacientes Ativos (Conectado ao BD) */}
         <div className="finpath-card p-5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-gray-400 mb-3">
-            <span className="text-xs font-semibold uppercase tracking-wider">Pacientes Ativos</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">Pacientes Cadastrados</span>
             <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            34 pacientes
+            {carregando ? "..." : totalPacientes} pacientes
           </div>
           <div className="flex items-center justify-between mt-3 text-xs">
-            <span className="text-purple-400 font-semibold">+4 este mês</span>
-            <span className="text-gray-500 text-[11px]">Via WhatsApp</span>
+            <span className="text-purple-400 font-semibold">Base de dados</span>
+            <span className="text-gray-500 text-[11px]">Sincronizado</span>
           </div>
           <div className="w-full bg-white/5 h-1 rounded-full mt-3 overflow-hidden">
-            <div className="bg-purple-400 h-full w-[65%] rounded-full" />
+            <div className="bg-purple-400 h-full w-[100%] rounded-full" />
           </div>
         </div>
       </div>
 
       {/* Main Grid: Consultas de Hoje + Atividade do Bot */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Agenda de Hoje (Finpath Tracking Table) */}
+        {/* Left 2 Cols: Agenda de Hoje */}
         <div className="lg:col-span-2 finpath-card p-6 space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-white/5">
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[#D2F802]" />
-                Agenda do Dia • Sessões de Hoje
+                Agenda de Consultas Recentes
               </h2>
-              <span className="text-xs text-gray-500">6 consultas programadas</span>
+              <span className="text-xs text-gray-500">
+                {carregando ? "Carregando..." : `${agendamentosHoje.length} consultas listadas`}
+              </span>
             </div>
             <Link
               href="/agenda"
@@ -156,87 +215,46 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {[
-              {
-                id: 1,
-                paciente: "Mariana Silva Santos",
-                telefone: "+55 11 •••••-4321",
-                horario: "09:00 - 09:50",
-                valor: "R$ 180,00",
-                pagamento: "PIX Recebido",
-                status: "Concluída",
-                badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-              },
-              {
-                id: 2,
-                paciente: "Lucas Gabriel Costa",
-                telefone: "+55 11 •••••-8902",
-                horario: "10:30 - 11:20",
-                valor: "R$ 150,00",
-                pagamento: "PIX Pendente",
-                status: "Confirmada (WhatsApp)",
-                badge: "bg-[#D2F802]/15 text-[#D2F802] border-[#D2F802]/30",
-              },
-              {
-                id: 3,
-                paciente: "Beatriz Ribeiro Lima",
-                telefone: "+55 21 •••••-1194",
-                horario: "14:00 - 14:50",
-                valor: "R$ 180,00",
-                pagamento: "Cartão de Crédito",
-                status: "Confirmada (WhatsApp)",
-                badge: "bg-[#D2F802]/15 text-[#D2F802] border-[#D2F802]/30",
-              },
-              {
-                id: 4,
-                paciente: "Eduardo Alencar Ramos",
-                telefone: "+55 11 •••••-7731",
-                horario: "15:30 - 16:20",
-                valor: "R$ 150,00",
-                pagamento: "Pendente",
-                status: "Lembrete 2h Enviado",
-                badge: "bg-blue-500/10 text-blue-400 border-blue-500/30",
-              },
-              {
-                id: 5,
-                paciente: "Juliana Ferreira Rocha",
-                telefone: "+55 31 •••••-9012",
-                horario: "17:00 - 17:50",
-                valor: "R$ 180,00",
-                pagamento: "Pendente",
-                status: "Agendada",
-                badge: "bg-gray-500/10 text-gray-400 border-gray-500/30",
-              },
-            ].map((item) => (
-              <div
-                key={item.id}
-                className="p-4 bg-[#11131a] border border-white/5 rounded-xl flex items-center justify-between hover:border-white/10 transition-colors flex-wrap gap-3"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-extrabold text-xs text-[#D2F802]">
-                    {item.paciente.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-xs text-white">{item.paciente}</h3>
-                    <div className="text-[11px] text-gray-500 font-mono flex items-center gap-2 mt-0.5">
-                      <span>{item.telefone}</span>
-                      <span>•</span>
-                      <span>{item.horario}</span>
+            {carregando ? (
+              <div className="py-8 text-center text-gray-500 flex flex-col items-center">
+                <Loader2 className="w-5 h-5 animate-spin mb-2" />
+                Sincronizando dados...
+              </div>
+            ) : agendamentosHoje.length === 0 ? (
+              <div className="py-8 text-center text-gray-500 text-sm">
+                Nenhuma consulta na sua agenda.
+              </div>
+            ) : (
+              agendamentosHoje.map((item) => (
+                <div
+                  key={item.id}
+                  className="p-4 bg-[#11131a] border border-white/5 rounded-xl flex items-center justify-between hover:border-white/10 transition-colors flex-wrap gap-3"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-extrabold text-xs text-[#D2F802]">
+                      {(item.patients?.full_name || "??").split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-xs text-white">{item.patients?.full_name || "Paciente Removido"}</h3>
+                      <div className="text-[11px] text-gray-500 font-mono flex items-center gap-2 mt-0.5">
+                        <span>{item.patients?.phone || "Sem número"}</span>
+                        <span>•</span>
+                        <span>{formatarHorario(item.starts_at, item.duration_minutes)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-mono font-bold text-xs text-white">{item.valor}</div>
-                    <div className="text-[10px] text-gray-500">{item.pagamento}</div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-xs text-white">R$ {item.price}</div>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full border bg-[#D2F802]/15 text-[#D2F802] border-[#D2F802]/30">
+                      Agendado
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border ${item.badge}`}>
-                    {item.status}
-                  </span>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
