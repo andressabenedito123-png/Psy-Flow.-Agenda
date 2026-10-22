@@ -154,8 +154,8 @@ export default function PacientesPage() {
 
                     <td className="py-4 px-5">
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${paciente.status === "active"
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                          : "bg-gray-500/10 text-gray-400 border-gray-500/30"
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                        : "bg-gray-500/10 text-gray-400 border-gray-500/30"
                         }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${paciente.status === "active" ? "bg-emerald-400" : "bg-gray-400"}`} />
                         {paciente.status === "active" ? "Ativo" : "Inativo"}
